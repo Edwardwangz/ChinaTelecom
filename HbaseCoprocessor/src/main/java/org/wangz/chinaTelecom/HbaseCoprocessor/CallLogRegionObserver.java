@@ -28,6 +28,7 @@ public class CallLogRegionObserver extends BaseRegionObserver {
     /**
      * Put后处理
      */
+    @Override
     public void postPut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit, Durability durability) throws IOException {
         super.postPut(e, put, edit, durability);
         //
@@ -35,12 +36,12 @@ public class CallLogRegionObserver extends BaseRegionObserver {
 
         //得到当前的TableName对象
         String tableName1 = e.getEnvironment().getRegion().getRegionInfo().getTable().getNameAsString();
-        //判断是否是ns1:calllogs表
+        //判断是否是hbase:calllogs表
         if (!tableName0.equals(tableName1)) {
             return;
         }
 
-        //得到主叫的rowkey,
+        //得到主叫的rowKey,格式为：59,13815885930,20190906080500,0/1,15969824568,45
         String rowKey = Bytes.toString(put.getRow());
 
         //如果被叫就放行
@@ -48,17 +49,17 @@ public class CallLogRegionObserver extends BaseRegionObserver {
         if (arr[3].equals("1")) {
             return;
         }
-        //hashcode,caller,time,flag,callee,duration
-        String caller = arr[1] ;        //主叫
+        //hashcode,calling,time,flag,called,duration
+        String calling = arr[1] ;        //主叫
         String callTime = arr[2] ;      //通话时间
-        String callee = arr[4] ;        //被叫
-        String callDuration = arr[5] ;  //通话时长
+        String called = arr[4] ;        //被叫
+        String duration = arr[5] ;  //通话时长
 
         //被叫hashcode
-        String hashcode = CallLogUtil.getHashcode(callee,callTime,100);
-        //被叫rowkey
-        String calleeRowKey = hashcode + "," + callee + "," + callTime + ",1," + caller + "," + callDuration;
-        Put newPut = new Put(Bytes.toBytes(calleeRowKey));
+        String hashcode = CallLogUtil.getHashcode(called,callTime,100);
+        //被叫rowKey
+        String calledRowKey = hashcode + "," + called + "," + callTime + ",1," + calling + "," + duration;
+        Put newPut = new Put(Bytes.toBytes(calledRowKey));
         newPut.addColumn(Bytes.toBytes("f2"), Bytes.toBytes(REF_ROW_ID), Bytes.toBytes(rowKey));
         TableName tn = TableName.valueOf(CALL_LOG_TABLE_NAME);
         Table t = e.getEnvironment().getTable(tn);
@@ -68,26 +69,27 @@ public class CallLogRegionObserver extends BaseRegionObserver {
     /**
      * 重写方法，完成被叫查询，返回主叫结果。
      */
+    @Override
     public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get, List<Cell> results) throws IOException {
         //获得表名
         String tableName = e.getEnvironment().getRegion().getRegionInfo().getTable().getNameAsString();
 
-        //判断表名是否是ns1:calllogs
+        //判断表名是否是hbase:calllogs
         if(!tableName.equals(CALL_LOG_TABLE_NAME)){
             super.preGetOp(e, get, results);
         }
         else{
-            //得到rowkey
-            String rowkey = Bytes.toString(get.getRow());
+            //得到rowKey
+            String rowKey = Bytes.toString(get.getRow());
             //
-            String[] arr = rowkey.split(",");
+            String[] arr = rowKey.split(",");
             //主叫
             if(arr[3].equals("0")){
                 super.postGetOp(e, get, results);
             }
             //被叫
             else{
-                //得到主叫方的rowkey
+                //得到主叫方的rowKey
                 String refrowid = Bytes.toString(CellUtil.cloneValue(results.get(0)));
                 //
                 Table tt = e.getEnvironment().getTable(TableName.valueOf(CALL_LOG_TABLE_NAME));
@@ -103,6 +105,7 @@ public class CallLogRegionObserver extends BaseRegionObserver {
     /**
      *
      */
+    @Override
     public boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> e, InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
         boolean b = super.postScannerNext(e, s, results, limit, hasMore);
 
