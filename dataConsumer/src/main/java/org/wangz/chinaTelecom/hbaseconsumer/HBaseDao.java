@@ -49,7 +49,7 @@ public class HBaseDao {
             callTime = values[2];
             duration = values[3];
         }
-        String rowKey = getRowKey(calling, callTime, "0", called, duration, 100);
+        String rowKey = getRowKey(calling, callTime, "1", called, duration, 100);
         Put put = new Put(rowKey.getBytes());
         put.addColumn("f1".getBytes(), "calling".getBytes(), calling.getBytes());
         put.addColumn("f1".getBytes(), "called".getBytes(), called.getBytes());

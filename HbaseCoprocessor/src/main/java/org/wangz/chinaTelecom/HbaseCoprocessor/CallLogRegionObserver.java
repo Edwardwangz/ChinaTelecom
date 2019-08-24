@@ -21,7 +21,7 @@ import java.util.List;
 public class CallLogRegionObserver extends BaseRegionObserver {
 
     //被叫引用id
-    private static final String REF_ROW_ID = "refRowKey" ;
+    private static final String REF_ROWKEY = "refRowKey" ;
     //通话记录表名
     private static final String CALL_LOG_TABLE_NAME = "hbase:calllogs" ;
 
@@ -29,7 +29,8 @@ public class CallLogRegionObserver extends BaseRegionObserver {
      * Put后处理
      */
     @Override
-    public void postPut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit, Durability durability) throws IOException {
+    public void postPut(ObserverContext<RegionCoprocessorEnvironment> e,
+                        Put put, WALEdit edit, Durability durability) throws IOException {
         super.postPut(e, put, edit, durability);
         //
         String tableName0 = TableName.valueOf(CALL_LOG_TABLE_NAME).getNameAsString();
@@ -60,7 +61,7 @@ public class CallLogRegionObserver extends BaseRegionObserver {
         //被叫rowKey
         String calledRowKey = hashcode + "," + called + "," + callTime + ",1," + calling + "," + duration;
         Put newPut = new Put(Bytes.toBytes(calledRowKey));
-        newPut.addColumn(Bytes.toBytes("f2"), Bytes.toBytes(REF_ROW_ID), Bytes.toBytes(rowKey));
+        newPut.addColumn(Bytes.toBytes("f2"), Bytes.toBytes(REF_ROWKEY), Bytes.toBytes(rowKey));
         TableName tn = TableName.valueOf(CALL_LOG_TABLE_NAME);
         Table t = e.getEnvironment().getTable(tn);
         t.put(newPut);
@@ -70,7 +71,8 @@ public class CallLogRegionObserver extends BaseRegionObserver {
      * 重写方法，完成被叫查询，返回主叫结果。
      */
     @Override
-    public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get, List<Cell> results) throws IOException {
+    public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e,
+                          Get get, List<Cell> results) throws IOException {
         //获得表名
         String tableName = e.getEnvironment().getRegion().getRegionInfo().getTable().getNameAsString();
 
@@ -90,10 +92,10 @@ public class CallLogRegionObserver extends BaseRegionObserver {
             //被叫
             else{
                 //得到主叫方的rowKey
-                String refrowid = Bytes.toString(CellUtil.cloneValue(results.get(0)));
+                String refRowkey = Bytes.toString(CellUtil.cloneValue(results.get(0)));
                 //
                 Table tt = e.getEnvironment().getTable(TableName.valueOf(CALL_LOG_TABLE_NAME));
-                Get g = new Get(Bytes.toBytes(refrowid));
+                Get g = new Get(Bytes.toBytes(refRowkey));
                 Result r = tt.get(g);
                 List<Cell> newList = r.listCells();
                 results.clear();
@@ -101,12 +103,12 @@ public class CallLogRegionObserver extends BaseRegionObserver {
             }
         }
     }
-
     /**
-     *
+     *重写方法，完成被叫查询，返回主叫结果
      */
     @Override
-    public boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> e, InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
+    public boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> e,
+                                   InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
         boolean b = super.postScannerNext(e, s, results, limit, hasMore);
 
         //新集合
@@ -115,13 +117,13 @@ public class CallLogRegionObserver extends BaseRegionObserver {
         //获得表名
         String tableName = e.getEnvironment().getRegion().getRegionInfo().getTable().getNameAsString();
 
-        //判断表名是否是ns1:calllogs
+        //判断表名是否是hbase:calllogs
         if (tableName.equals(CALL_LOG_TABLE_NAME)) {
-            Table tt = e.getEnvironment().getTable(TableName.valueOf(CALL_LOG_TABLE_NAME));
+            Table table = e.getEnvironment().getTable(TableName.valueOf(CALL_LOG_TABLE_NAME));
             for(Result r : results){
-                //rowkey
-                String rowkey = Bytes.toString(r.getRow());
-                String flag = rowkey.split(",")[3] ;
+                //rowKey
+                String rowKey = Bytes.toString(r.getRow());
+                String flag = rowKey.split(",")[3] ;
                 //主叫
                 if(flag.equals("0")){
                     newList.add(r) ;
@@ -129,9 +131,9 @@ public class CallLogRegionObserver extends BaseRegionObserver {
                 //被叫
                 else{
                     //取出主叫号码
-                    byte[] refrowkey = r.getValue(Bytes.toBytes("f2"),Bytes.toBytes(REF_ROW_ID)) ;
-                    Get newGet = new Get(refrowkey);
-                    newList.add(tt.get(newGet));
+                    byte[] refRowKey = r.getValue(Bytes.toBytes("f2"),Bytes.toBytes(REF_ROWKEY)) ;
+                    Get newGet = new Get(refRowKey);
+                    newList.add(table.get(newGet));
                 }
             }
             results.clear();
