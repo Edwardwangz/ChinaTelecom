@@ -10,6 +10,7 @@ import java.util.Collections;
 public class HBaseConsumer {
 
     public static void main(String[] args) {
+//        BasicConfigurator.configure();
         HBaseDao dao = new HBaseDao();
 //        dao.truncateTable("hbase:calllogs");
 

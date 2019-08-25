@@ -17,7 +17,7 @@ public class HBaseDao {
     public HBaseDao() {
         try {
             Configuration conf = HBaseConfiguration.create();
-            conf.set("hbase.zookeeper.quorum", "node2,node3,node4");
+            conf.set("hbase.zookeeper.quorum", "node2:2181,node3:2181,node4:2181");
             Connection conn = ConnectionFactory.createConnection(conf);
             TableName tableName = TableName.valueOf(PropertiesUtil.getProp(Constants.HBASE_TABLENAME));
             admin = conn.getAdmin();
@@ -49,7 +49,7 @@ public class HBaseDao {
             callTime = values[2];
             duration = values[3];
         }
-        String rowKey = getRowKey(calling, callTime, "1", called, duration, 100);
+        String rowKey = getRowKey(calling, callTime, "0", called, duration, 100);
         Put put = new Put(rowKey.getBytes());
         put.addColumn("f1".getBytes(), "calling".getBytes(), calling.getBytes());
         put.addColumn("f1".getBytes(), "called".getBytes(), called.getBytes());

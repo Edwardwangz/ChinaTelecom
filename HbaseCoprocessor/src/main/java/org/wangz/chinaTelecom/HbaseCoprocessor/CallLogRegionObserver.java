@@ -21,9 +21,9 @@ import java.util.List;
 public class CallLogRegionObserver extends BaseRegionObserver {
 
     //被叫引用id
-    private static final String REF_ROWKEY = "refRowKey" ;
+    private static final String REF_ROWKEY = "refRowKey";
     //通话记录表名
-    private static final String CALL_LOG_TABLE_NAME = "hbase:calllogs" ;
+    private static final String CALL_LOG_TABLE_NAME = "hbase:calllogs";
 
     /**
      * Put后处理
@@ -51,15 +51,15 @@ public class CallLogRegionObserver extends BaseRegionObserver {
             return;
         }
         //hashcode,calling,time,flag,called,duration
-        String calling = arr[1] ;        //主叫
-        String callTime = arr[2] ;      //通话时间
-        String called = arr[4] ;        //被叫
-        String duration = arr[5] ;  //通话时长
+        String calling = arr[1];        //主叫
+        String callTime = arr[2];      //通话时间
+        String called = arr[4];        //被叫
+        String duration = arr[5];  //通话时长
 
-        //被叫hashcode
-        String hashcode = CallLogUtil.getHashcode(called,callTime,100);
         //被叫rowKey
-        String calledRowKey = hashcode + "," + called + "," + callTime + ",1," + calling + "," + duration;
+        String hashcode = CallLogUtil.getHashcode(called, callTime, 100);
+        String calledRowKey = hashcode + "," + called + "," + callTime
+                               + "," + "1" + "," + calling + "," + duration;
         Put newPut = new Put(Bytes.toBytes(calledRowKey));
         newPut.addColumn(Bytes.toBytes("f2"), Bytes.toBytes(REF_ROWKEY), Bytes.toBytes(rowKey));
         TableName tn = TableName.valueOf(CALL_LOG_TABLE_NAME);
@@ -69,7 +69,12 @@ public class CallLogRegionObserver extends BaseRegionObserver {
 
     /**
      * 重写方法，完成被叫查询，返回主叫结果。
+     * @param e
+     * @param get
+     * @param results
+     * @throws IOException
      */
+
     @Override
     public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e,
                           Get get, List<Cell> results) throws IOException {
@@ -103,9 +108,18 @@ public class CallLogRegionObserver extends BaseRegionObserver {
             }
         }
     }
+
     /**
-     *重写方法，完成被叫查询，返回主叫结果
+     * 重写方法，完成被叫查询，返回主叫结果
+     * @param e
+     * @param s
+     * @param results
+     * @param limit
+     * @param hasMore
+     * @return
+     * @throws IOException
      */
+
     @Override
     public boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> e,
                                    InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
